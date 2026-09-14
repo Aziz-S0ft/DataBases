@@ -214,15 +214,36 @@ Appointment 1:N Prescription
 
 ---
 
-### Task 2.2: E-commerce Platform
+# Task 2.2: E-commerce Platform
 
-1. **Weak Entity & Justification:**
-   * **Weak Entity:** `OrderItem`
-   * **Justification:** An `OrderItem` cannot exist independently without a parent `Order`. Its existence depends entirely on `Order`, and its key is a composite discriminant (`OrderID` + `ItemNumber`).
+## 1. Weak Entity & Justification
 
-2. **Many-to-Many (M:N) Relationship with Attributes:**
-   * **Relationship:** `Order` ↔ `Product` (resolved via associative entity `OrderItem`).
-   * **Attributes on Relationship:** `Quantity`, `UnitPriceAtOrderTime`.
+* **Weak Entity:** `OrderItem`
+* **Justification:** An `OrderItem` cannot exist independently without a parent `Order`. Its existence depends on a specific `Order`.
+* `ItemNumber` is the **partial key** of `OrderItem`.
+* The complete identification of an `OrderItem` is **(OrderID, ItemNumber)**.
+
+---
+
+## 2. Many-to-Many (M:N) Relationship with Attributes
+
+* **Relationship:** `Order` ↔ `Product`
+* **Cardinality:** **M:N**
+* The M:N relationship is resolved using the associative entity `OrderItem`.
+* **Attributes of `OrderItem`:**
+
+  * `Quantity`
+  * `UnitPriceAtOrderTime`
+
+### Explanation
+
+One `Order` can contain multiple `Products`, and one `Product` can appear in multiple `Orders`.
+
+Therefore:
+
+**Order M:N Product**
+
+The `OrderItem` entity resolves this M:N relationship and stores information specific to each product in an order, such as the quantity ordered and the price at the time of purchase.
 
 ---
 
