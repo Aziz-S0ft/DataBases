@@ -67,29 +67,68 @@
 
 ## Part 2: ER Diagram Construction
 
-### Task 2.1: Hospital Management System
+# Task 2.1: Hospital Management System
 
-1. **Entities & Classification:**
-   * **Strong Entities:** `Patient`, `Doctor`, `Department`
-   * **Weak Entities:** 
-     * `Hospital Room` (Weak entity; identified relative to `Department`). Partial Key: `RoomNumber`.
-     * `Appointment` (Associative / Weak entity connecting `Patient` and `Doctor`).
-     * `Prescription` (Weak entity dependent on `Appointment`).
+## 1. Entities & Classification
 
-2. **Attribute Classification:**
-   * **`Patient`:** `PatientID` (PK, Simple), `Name` (Simple), `Birthdate` (Simple), `Address` (Composite: Street, City, State, Zip), `Phone` (Multivalued), `InsuranceInfo` (Simple).
-   * **`Doctor`:** `DoctorID` (PK, Simple), `Name` (Simple), `Specialization` (Multivalued), `Phone` (Simple), `OfficeLocation` (Simple).
-   * **`Department`:** `DeptCode` (PK, Simple), `Name` (Simple), `Location` (Simple).
-   * **`Hospital Room`:** `RoomNumber` (Partial Key, Simple).
-   * **`Appointment`:** `AppointmentID` (PK), `DateTime` (Simple), `Purpose` (Simple), `Notes` (Simple).
-   * **`Prescription`:** `PrescriptionID` (PK), `Medication` (Simple), `Dosage` (Simple), `Instructions` (Simple).
+**Strong Entities:** `Patient`, `Doctor`, `Department`, `Appointment`, `Prescription`
 
-3. **Relationships & Cardinalities:**
-   * `Department` to `Hospital Room`: **1:N** (One department has many rooms; a room belongs to one department).
-   * `Department` to `Doctor`: **1:N** (One department employs many doctors).
-   * `Patient` to `Appointment`: **1:N** (One patient can have many appointments).
-   * `Doctor` to `Appointment`: **1:N** (One doctor handles many appointments).
-   * `Appointment` to `Prescription`: **1:N** (An appointment generates prescriptions).
+**Weak Entity:** `Hospital Room` — identified relative to `Department` (owner entity).
+- Partial Key: `RoomNumber`
+- Full identifier: `(DeptCode, RoomNumber)`, since a room number is only unique within a department (e.g., Room 101 in Cardiology ≠ Room 101 in Neurology).
+
+## 2. Attribute Classification
+
+| Entity | Attribute | Type |
+|---|---|---|
+| **Patient** | `PatientID` | PK, Simple |
+| | `Name` | Simple |
+| | `Birthdate` | Simple |
+| | `Address` | Composite (Street, City, State, Zip) |
+| | `Phone` | Multivalued |
+| | `InsuranceInfo` | Simple |
+| **Doctor** | `DoctorID` | PK, Simple |
+| | `Name` | Simple |
+| | `Specialization` | Multivalued |
+| | `Phone` | Simple |
+| | `OfficeLocation` | Simple |
+| **Department** | `DeptCode` | PK, Simple |
+| | `Name` | Simple |
+| | `Location` | Simple |
+| **Hospital Room** | `RoomNumber` | Partial Key, Simple |
+| | `DeptCode` | FK (part of composite PK) |
+| **Appointment** | `AppointmentID` | PK, Simple |
+| | `DateTime` | Simple |
+| | `Purpose` | Simple |
+| | `Notes` | Simple |
+| **Prescription** | `PrescriptionID` | PK, Simple |
+| | `Medication` | Simple |
+| | `Dosage` | Simple |
+| | `Instructions` | Simple |
+
+## 3. Relationships & Cardinalities
+
+| Relationship | Cardinality | Participation |
+|---|---|---|
+| `Department` — `Hospital Room` | 1:N | Room: total; Department: partial |
+| `Department` — `Doctor` | 1:N | Doctor: total; Department: partial |
+| `Patient` — `Appointment` | 1:N | Appointment: total; Patient: partial |
+| `Doctor` — `Appointment` | 1:N | Appointment: total; Doctor: partial |
+| `Doctor` — `Prescription` | 1:N | Prescription: total; Doctor: partial |
+| `Patient` — `Prescription` | 1:N | Prescription: total; Patient: partial |
+
+> **Note:** `Prescription` is modeled as directly related to both `Doctor` and `Patient` (rather than derived only through `Appointment`), matching the requirement "medications prescribed by doctors to patients." This also allows a prescription to be recorded outside a formal appointment (e.g., a refill).
+
+## 4. Primary Keys
+
+- `Patient`: **`PatientID`**
+- `Doctor`: **`DoctorID`**
+- `Department`: **`DeptCode`**
+- `Appointment`: **`AppointmentID`**
+- `Prescription`: **`PrescriptionID`**
+- `Hospital Room`: **`(DeptCode, RoomNumber)`** — composite key (`RoomNumber` is the partial key, underlined with a dashed line per weak-entity notation)
+
+
 
 ---
 
