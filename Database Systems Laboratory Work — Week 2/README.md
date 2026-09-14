@@ -515,27 +515,229 @@ Therefore, no original information is lost through the decomposition.
 - `StudentEnrollment(StudentID PK, CourseID PK, TimeSlot PK)`
 ---
 
-## Part 5: Design Challenge
+# Part 5: Design Challenge
 
-### System: University Student Clubs & Organizations
+## Task 5.1: Real-World Application
 
-#### 1. Normalized Relational Schema (3NF):
+### 1. ER Diagram Design
 
-* `Club` (**ClubID**, ClubName, FoundedDate, Budget, *AdvisorID*)
-* `FacultyAdvisor` (**AdvisorID**, Name, Email, Department)
-* `Student` (**StudentID**, Name, Email, Major)
-* `ClubMembership` (**StudentID**, **ClubID**, JoinDate)
-* `ClubOfficer` (**OfficerID**, *StudentID*, *ClubID*, Position, TermYear)
-* `Room` (**RoomID**, Building, RoomNumber, Capacity)
-* `ClubEvent` (**EventID**, EventName, EventDate, *ClubID*, *RoomID*)
-* `EventAttendance` (**StudentID**, **EventID**, AttendanceStatus)
-* `ClubExpense` (**ExpenseID**, *ClubID*, Amount, Description, ExpenseDate)
+The university needs a system to manage student clubs and organizations, memberships, events, attendance, officers, faculty advisors, room reservations, budgets, and expenses.
 
-#### 2. Design Decision & Justification:
-* **Decision:** Separating `ClubMembership` and `ClubOfficer` into two distinct entities instead of placing `Position` as a nullable field in `ClubMembership`.
-* **Justification:** A student can remain a general member for multiple years while holding different officer positions over time (e.g., Vice President in 2025, President in 2026). Keeping `ClubOfficer` separate prevents historical update anomalies and correctly models term limits.
+### Main Entities
 
-#### 3. 3 Required Business Queries (English):
-1. *"Find all students who are officers in the Computer Science Club."*
-2. *"List all events scheduled for next week along with their reserved room numbers and host club names."*
-3. *"Calculate total expenses and remaining budget for each club for the current academic year."*
+#### Student
+- StudentID (PK)
+- Name
+- Email
+
+#### Club
+- ClubID (PK)
+- ClubName
+- Description
+- Budget
+
+#### Faculty
+- FacultyID (PK)
+- Name
+- Department
+- Email
+
+#### Membership
+- StudentID (PK, FK)
+- ClubID (PK, FK)
+- JoinDate
+
+Membership is an associative entity because students can join multiple clubs and each club can have multiple students.
+
+#### OfficerPosition
+- PositionID (PK)
+- PositionName
+
+Examples:
+- President
+- Treasurer
+- Secretary
+
+#### ClubOfficer
+- StudentID (PK, FK)
+- ClubID (PK, FK)
+- PositionID (FK)
+- StartDate
+- EndDate
+
+ClubOfficer connects students with clubs and officer positions.
+
+#### Event
+- EventID (PK)
+- ClubID (FK)
+- EventName
+- EventDate
+- Description
+
+One club can organize many events.
+
+#### Attendance
+- StudentID (PK, FK)
+- EventID (PK, FK)
+- AttendanceStatus
+
+Attendance is an associative entity between Student and Event.
+
+#### Room
+- RoomID (PK)
+- Building
+- RoomNumber
+- Capacity
+
+#### RoomReservation
+- ReservationID (PK)
+- EventID (FK)
+- RoomID (FK)
+- StartTime
+- EndTime
+
+#### Expense
+- ExpenseID (PK)
+- ClubID (FK)
+- ExpenseDate
+- Amount
+- Description
+
+---
+
+### Relationships and Cardinalities
+
+1. Student M:N Club
+   - Resolved by Membership.
+
+2. Student M:N Event
+   - Resolved by Attendance.
+
+3. Club 1:N Event
+   - One club can organize many events.
+   - Each event belongs to one club.
+
+4. Faculty 1:N Club
+   - Each club has exactly one faculty advisor.
+   - One faculty advisor can advise multiple clubs.
+
+5. Club M:N Student through ClubOfficer
+   - A student can hold an officer position in a club.
+
+6. OfficerPosition 1:N ClubOfficer
+   - One position type can be assigned to many officers.
+
+7. Event 1:N RoomReservation
+   - An event can have a room reservation.
+
+8. Room 1:N RoomReservation
+   - A room can be reserved for many events at different times.
+
+9. Club 1:N Expense
+   - One club can have many expenses.
+
+---
+
+## 2. Normalized Relational Schema
+
+### Student
+
+`Student(StudentID PK, Name, Email)`
+
+### Club
+
+`Club(ClubID PK, ClubName, Description, Budget, FacultyID FK)`
+
+### Faculty
+
+`Faculty(FacultyID PK, Name, Department, Email)`
+
+### Membership
+
+`Membership(StudentID PK/FK, ClubID PK/FK, JoinDate)`
+
+Foreign Keys:
+- `StudentID → Student.StudentID`
+- `ClubID → Club.ClubID`
+
+### OfficerPosition
+
+`OfficerPosition(PositionID PK, PositionName)`
+
+### ClubOfficer
+
+`ClubOfficer(StudentID PK/FK, ClubID PK/FK, PositionID FK, StartDate, EndDate)`
+
+Foreign Keys:
+- `StudentID → Student.StudentID`
+- `ClubID → Club.ClubID`
+- `PositionID → OfficerPosition.PositionID`
+
+### Event
+
+`Event(EventID PK, ClubID FK, EventName, EventDate, Description)`
+
+Foreign Key:
+- `ClubID → Club.ClubID`
+
+### Attendance
+
+`Attendance(StudentID PK/FK, EventID PK/FK, AttendanceStatus)`
+
+Foreign Keys:
+- `StudentID → Student.StudentID`
+- `EventID → Event.EventID`
+
+### Room
+
+`Room(RoomID PK, Building, RoomNumber, Capacity)`
+
+### RoomReservation
+
+`RoomReservation(ReservationID PK, EventID FK, RoomID FK, StartTime, EndTime)`
+
+Foreign Keys:
+- `EventID → Event.EventID`
+- `RoomID → Room.RoomID`
+
+### Expense
+
+`Expense(ExpenseID PK, ClubID FK, ExpenseDate, Amount, Description)`
+
+Foreign Key:
+- `ClubID → Club.ClubID`
+
+---
+
+## 3. Design Decision
+
+One design decision is how to represent club officer positions.
+
+There are two possible approaches:
+
+### Option 1
+Store the position directly in the ClubOfficer table:
+
+`ClubOfficer(StudentID, ClubID, PositionName, StartDate, EndDate)`
+
+### Option 2
+Create a separate OfficerPosition entity:
+
+`OfficerPosition(PositionID, PositionName)`
+
+I chose **Option 2** because it avoids repeating position names such as "President", "Treasurer", and "Secretary".
+
+It also makes the database more normalized and allows the university to manage a standard list of officer positions.
+
+---
+
+## 4. Example Queries
+
+### Query 1
+"Find all students who are officers in the Computer Science Club."
+
+### Query 2
+"List all events scheduled for next week with their room reservations, including the building and room number."
+
+### Query 3
+"Show the total expenses for each club during the current semester."
