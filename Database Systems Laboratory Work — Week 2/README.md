@@ -249,41 +249,156 @@ The `OrderItem` entity resolves this M:N relationship and stores information spe
 
 ## Part 4: Normalization Workshop
 
-### Task 4.1: Denormalized Table Analysis
+# Task 4.1: Denormalized Table Analysis
 
 Given relation:
+
 `StudentProject(StudentID, StudentName, StudentMajor, ProjectID, ProjectTitle, ProjectType, SupervisorID, SupervisorName, SupervisorDept, Role, HoursWorked, StartDate, EndDate)`
 
-#### 1. Functional Dependencies (FDs):
-* FD1: `StudentID` → `StudentName`, `StudentMajor`
-* FD2: `ProjectID` → `ProjectTitle`, `ProjectType`, `SupervisorID`, `StartDate`, `EndDate`
-* FD3: `SupervisorID` → `SupervisorName`, `SupervisorDept`
-* FD4: {`StudentID`, `ProjectID`} → `Role`, `HoursWorked`
+## 1. Functional Dependencies (FDs)
 
-#### 2. Redundancy & Anomalies:
-* **Update Anomaly:** Changing a supervisor’s department requires updating multiple rows for every project/student assigned to them.
-* **Insertion Anomaly:** Cannot add a new student who hasn't been assigned to a project yet without inserting `NULL` values for project details.
-* **Deletion Anomaly:** Deleting the only student on a project removes all records of that project and supervisor from the database.
+* **FD1:** `StudentID → StudentName, StudentMajor`
+* **FD2:** `ProjectID → ProjectTitle, ProjectType, SupervisorID, StartDate, EndDate`
+* **FD3:** `SupervisorID → SupervisorName, SupervisorDept`
+* **FD4:** `{StudentID, ProjectID} → Role, HoursWorked`
 
-#### 3. 1NF Analysis & 2NF Decomposition:
-* **1NF:** Satisfied (all attributes are atomic).
-* **Primary Key:** {`StudentID`, `ProjectID`}
-* **Partial Dependencies (2NF Violations):** 
-  * FD1 depends only on part of the key (`StudentID`).
-  * FD2 depends only on part of the key (`ProjectID`).
-* **2NF Decomposition:**
-  * `Student(StudentID, StudentName, StudentMajor)`
-  * `Project(ProjectID, ProjectTitle, ProjectType, SupervisorID, StartDate, EndDate)`
-  * `Supervisor(SupervisorID, SupervisorName, SupervisorDept)`
-  * `StudentProjectAssignment(StudentID, ProjectID, Role, HoursWorked)`
+The primary key is `{StudentID, ProjectID}` because a student can participate in multiple projects, and a project can have multiple students.
 
-#### 4. 3NF Decomposition (Removing Transitive Dependencies):
-* FD3 (`SupervisorID` → `SupervisorName`, `SupervisorDept`) was transitive inside `Project`.
-* **Final 3NF Relations:**
-  1. `Student` (**StudentID**, StudentName, StudentMajor)
-  2. `Supervisor` (**SupervisorID**, SupervisorName, SupervisorDept)
-  3. `Project` (**ProjectID**, ProjectTitle, ProjectType, *SupervisorID*, StartDate, EndDate)
-  4. `ProjectAssignment` (**StudentID**, **ProjectID**, Role, HoursWorked)
+---
+
+## 2. Redundancy & Anomalies
+
+### Redundancy
+
+Student information, project information, and supervisor information can be repeated across multiple rows.
+
+For example, if several students work on the same project, the following project information is repeated:
+
+* `ProjectTitle`
+* `ProjectType`
+* `SupervisorID`
+* `SupervisorName`
+* `SupervisorDept`
+* `StartDate`
+* `EndDate`
+
+### Update Anomaly
+
+If a supervisor changes their department, the `SupervisorDept` must be updated in multiple rows. If some rows are not updated, inconsistent data will exist.
+
+### Insertion Anomaly
+
+A new student who has not been assigned to any project cannot be easily added because the relation requires project-related information.
+
+Similarly, adding a new project without assigning any student would require `StudentID` to be NULL.
+
+### Deletion Anomaly
+
+If the only student assigned to a project is deleted, all information about that project and its supervisor may also be lost.
+
+---
+
+## 3. 1NF and 2NF
+
+### 1NF
+
+The relation is already in **1NF** because all attributes contain atomic values and there are no repeating groups.
+
+### Primary Key
+
+The primary key is:
+
+`{StudentID, ProjectID}`
+
+### Partial Dependencies
+
+There are two partial dependencies:
+
+* `StudentID → StudentName, StudentMajor`
+* `ProjectID → ProjectTitle, ProjectType, SupervisorID, StartDate, EndDate`
+
+These attributes depend only on part of the composite primary key.
+
+However:
+
+`{StudentID, ProjectID} → Role, HoursWorked`
+
+depends on the entire primary key, so it is not a partial dependency.
+
+### 2NF Decomposition
+
+Remove the partial dependencies:
+
+**Student**
+
+`Student(StudentID, StudentName, StudentMajor)`
+
+**Project**
+
+`Project(ProjectID, ProjectTitle, ProjectType, SupervisorID, SupervisorName, SupervisorDept, StartDate, EndDate)`
+
+**ProjectAssignment**
+
+`ProjectAssignment(StudentID, ProjectID, Role, HoursWorked)`
+
+At this stage, the relations are in **2NF**, but `Project` still contains a transitive dependency.
+
+---
+
+## 4. 3NF Decomposition
+
+### Transitive Dependency
+
+In the `Project` relation:
+
+`ProjectID → SupervisorID`
+
+and:
+
+`SupervisorID → SupervisorName, SupervisorDept`
+
+Therefore:
+
+`ProjectID → SupervisorName, SupervisorDept`
+
+This is a **transitive dependency**.
+
+To achieve 3NF, supervisor information must be separated into its own relation.
+
+### Final 3NF Relations
+
+**1. Student**
+
+`Student(StudentID PK, StudentName, StudentMajor)`
+
+**2. Supervisor**
+
+`Supervisor(SupervisorID PK, SupervisorName, SupervisorDept)`
+
+**3. Project**
+
+`Project(ProjectID PK, ProjectTitle, ProjectType, SupervisorID FK, StartDate, EndDate)`
+
+**4. ProjectAssignment**
+
+`ProjectAssignment(StudentID PK/FK, ProjectID PK/FK, Role, HoursWorked)`
+
+### Foreign Keys
+
+* `Project.SupervisorID → Supervisor.SupervisorID`
+* `ProjectAssignment.StudentID → Student.StudentID`
+* `ProjectAssignment.ProjectID → Project.ProjectID`
+
+---
+
+## Final Answer
+
+The final database in **3NF** consists of four relations:
+
+1. `Student(StudentID PK, StudentName, StudentMajor)`
+2. `Supervisor(SupervisorID PK, SupervisorName, SupervisorDept)`
+3. `Project(ProjectID PK, ProjectTitle, ProjectType, SupervisorID FK, StartDate, EndDate)`
+4. `ProjectAssignment(StudentID PK/FK, ProjectID PK/FK, Role, HoursWorked)`
 
 ---
 
