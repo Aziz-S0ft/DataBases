@@ -11,9 +11,9 @@
    * `{EmpID}`
    * `{SSN}`
    * `{Email}`
+   * `{phone}`
    * `{EmpID, Name}`
    * `{SSN, Department}`
-   * `{Email, Phone, Salary}`
 
 2. **Candidate Keys:**
    * `{EmpID}`
