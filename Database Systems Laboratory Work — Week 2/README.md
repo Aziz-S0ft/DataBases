@@ -65,9 +65,9 @@
 
 ---
 
-## Part 2: ER Diagram Construction
+# Part 2: ER Diagram Construction
 
-# Task 2.1: Hospital Management System
+## Task 2.1: Hospital Management System
 
 ## 1. Entities & Classification
 
