@@ -401,36 +401,118 @@ The final database in **3NF** consists of four relations:
 4. `ProjectAssignment(StudentID PK/FK, ProjectID PK/FK, Role, HoursWorked)`
 
 ---
-
 ### Task 4.2: Advanced Normalization
 
 Given relation:
+
 `CourseSchedule(StudentID, StudentMajor, CourseID, CourseName, InstructorID, InstructorName, TimeSlot, Room, Building)`
 
-#### 1. Primary Key & Functional Dependencies:
-* FD1: `StudentID` → `StudentMajor`
-* FD2: `CourseID` → `CourseName`
-* FD3: `InstructorID` → `InstructorName`
-* FD4: {`TimeSlot`, `Room`} → `Building`
-* FD5: {`CourseID`, `TimeSlot`} → `InstructorID`, `Room`
-* FD6: {`StudentID`, `TimeSlot`} → `CourseID`
-* **Primary Key:** {`StudentID`, `TimeSlot`}
+#### 1. Primary Key & Functional Dependencies
 
-#### 2. BCNF Decomposition:
-The table violates BCNF because the LHS of FD1, FD2, FD3, FD4, FD5 are not superkeys.
+A student can be enrolled in multiple course sections.
 
-**Decomposed BCNF Relations:**
-1. `Student` (**StudentID**, StudentMajor)
-2. `Course` (**CourseID**, CourseName)
-3. `Instructor` (**InstructorID**, InstructorName)
-4. `RoomLocation` (**TimeSlot**, **Room**, Building)
-5. `ClassSection` (**CourseID**, **TimeSlot**, InstructorID, Room)
-6. `StudentEnrollment` (**StudentID**, **TimeSlot**, *CourseID*)
+A course section is identified by its `CourseID` and `TimeSlot`. Therefore, to identify one enrollment, we need:
 
-#### 3. Information Loss Analysis:
-* **Lossless Join:** Preserved. Joining tables reconstitutes the exact original relation without extra or missing tuples.
-* **Dependency Preservation:** All functional dependencies are preserved across decomposed relations.
+**Primary Key:** `{StudentID, CourseID, TimeSlot}`
 
+Functional Dependencies:
+
+- FD1: `StudentID → StudentMajor`
+- FD2: `CourseID → CourseName`
+- FD3: `InstructorID → InstructorName`
+- FD4: `Room → Building`
+- FD5: `{CourseID, TimeSlot} → InstructorID, Room`
+
+The primary key determines all remaining attributes:
+
+- `{StudentID, CourseID, TimeSlot} → StudentMajor, CourseName, InstructorID, InstructorName, Room, Building`
+
+#### 2. BCNF Check
+
+The original relation is **not in BCNF**.
+
+BCNF requires that the left-hand side of every non-trivial functional dependency is a superkey.
+
+However:
+
+- `StudentID` is not a superkey.
+- `CourseID` is not a superkey.
+- `InstructorID` is not a superkey.
+- `Room` is not a superkey.
+- `{CourseID, TimeSlot}` is not a superkey because it does not identify a particular student.
+
+Therefore, the relation violates BCNF.
+
+#### 3. BCNF Decomposition
+
+We decompose the relation into the following BCNF relations:
+
+1. `Student(**StudentID**, StudentMajor)`
+
+2. `Course(**CourseID**, CourseName)`
+
+3. `Instructor(**InstructorID**, InstructorName)`
+
+4. `RoomLocation(**Room**, Building)`
+
+5. `ClassSection(**CourseID, TimeSlot**, InstructorID, Room)`
+
+6. `StudentEnrollment(**StudentID, CourseID, TimeSlot**)`
+
+Where:
+
+- `StudentID` in `StudentEnrollment` references `Student(StudentID)`
+- `CourseID` in `StudentEnrollment` references `Course(CourseID)`
+- `(CourseID, TimeSlot)` in `StudentEnrollment` references `ClassSection(CourseID, TimeSlot)`
+- `InstructorID` in `ClassSection` references `Instructor(InstructorID)`
+- `Room` in `ClassSection` references `RoomLocation(Room)`
+
+#### 4. Why the Decomposition is in BCNF
+
+Each relation has a determinant that is a candidate key:
+
+- `StudentID → StudentMajor` in `Student`
+- `CourseID → CourseName` in `Course`
+- `InstructorID → InstructorName` in `Instructor`
+- `Room → Building` in `RoomLocation`
+- `{CourseID, TimeSlot} → InstructorID, Room` in `ClassSection`
+
+Therefore, all decomposed relations satisfy BCNF.
+
+#### 5. Information Loss Analysis
+
+The decomposition is **lossless** because the relations can be joined using their primary keys and foreign keys to reconstruct the original information.
+
+For example:
+
+`StudentEnrollment`
+→ identifies the student and course section
+
+`ClassSection`
+→ gives the instructor, time, and room
+
+`Course`
+→ gives the course name
+
+`Instructor`
+→ gives the instructor name
+
+`RoomLocation`
+→ gives the building
+
+`Student`
+→ gives the student's major
+
+Therefore, no original information is lost through the decomposition.
+
+### Final BCNF Schema
+
+- `Student(StudentID PK, StudentMajor)`
+- `Course(CourseID PK, CourseName)`
+- `Instructor(InstructorID PK, InstructorName)`
+- `RoomLocation(Room PK, Building)`
+- `ClassSection(CourseID PK, TimeSlot PK, InstructorID, Room)`
+- `StudentEnrollment(StudentID PK, CourseID PK, TimeSlot PK)`
 ---
 
 ## Part 5: Design Challenge
