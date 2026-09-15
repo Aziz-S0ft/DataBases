@@ -523,221 +523,174 @@ Therefore, no original information is lost through the decomposition.
 
 The university needs a system to manage student clubs and organizations, memberships, events, attendance, officers, faculty advisors, room reservations, budgets, and expenses.
 
-### Main Entities
+# Task 5.1: Real-World Application — Student Clubs Database
 
-#### Student
-- StudentID (PK)
-- Name
-- Email
+## 1. ER Diagram
 
-#### Club
-- ClubID (PK)
-- ClubName
-- Description
-- Budget
+```mermaid
+erDiagram
+    STUDENT ||--o{ MEMBERSHIP : joins
+    CLUB ||--o{ MEMBERSHIP : has_members
+    STUDENT ||--o{ CLUBOFFICER : holds
+    CLUB ||--o{ CLUBOFFICER : has_officers
+    OFFICERPOSITION ||--o{ CLUBOFFICER : defines
+    FACULTY ||--o{ CLUB : advises
+    CLUB ||--o{ EVENT : organizes
+    STUDENT ||--o{ ATTENDANCE : attends
+    EVENT ||--o{ ATTENDANCE : logs
+    EVENT ||--o{ ROOMRESERVATION : reserved_for
+    ROOM ||--o{ ROOMRESERVATION : booked_as
+    CLUB ||--o{ EXPENSE : incurs
 
-#### Faculty
-- FacultyID (PK)
-- Name
-- Department
-- Email
+    STUDENT {
+        int StudentID PK
+        string Name
+        string Email
+    }
+    CLUB {
+        int ClubID PK
+        string ClubName
+        string Description
+        decimal Budget
+        int FacultyID FK
+    }
+    FACULTY {
+        int FacultyID PK
+        string Name
+        string Department
+        string Email
+    }
+    MEMBERSHIP {
+        int MembershipID PK
+        int StudentID FK
+        int ClubID FK
+        date JoinDate
+        date LeaveDate
+    }
+    OFFICERPOSITION {
+        int PositionID PK
+        string PositionName
+    }
+    CLUBOFFICER {
+        int ClubOfficerID PK
+        int StudentID FK
+        int ClubID FK
+        int PositionID FK
+        date StartDate
+        date EndDate
+    }
+    EVENT {
+        int EventID PK
+        int ClubID FK
+        string EventName
+        date EventDate
+        string Description
+    }
+    ATTENDANCE {
+        int StudentID PK_FK
+        int EventID PK_FK
+        string AttendanceStatus
+    }
+    ROOM {
+        int RoomID PK
+        string Building
+        string RoomNumber
+        int Capacity
+    }
+    ROOMRESERVATION {
+        int ReservationID PK
+        int EventID FK
+        int RoomID FK
+        datetime StartTime
+        datetime EndTime
+    }
+    EXPENSE {
+        int ExpenseID PK
+        int ClubID FK
+        date ExpenseDate
+        string Semester
+        decimal Amount
+        string Description
+    }
+```
 
-#### Membership
-- StudentID (PK, FK)
-- ClubID (PK, FK)
-- JoinDate
+### Relationships and cardinalities
 
-Membership is an associative entity because students can join multiple clubs and each club can have multiple students.
+| Relationship | Cardinality | Notes |
+|---|---|---|
+| Student — Club | M:N | resolved via `Membership` |
+| Student — Event | M:N | resolved via `Attendance` |
+| Club — Event | 1:N | one club runs many events |
+| Faculty — Club | 1:N | each club has exactly one advisor; a faculty member can advise many clubs |
+| Student/Club — OfficerPosition | M:N | resolved via `ClubOfficer`, which also carries the term dates |
+| Event — RoomReservation | 1:N | an event can span several reservations (e.g. multi-day) |
+| Room — RoomReservation | 1:N | a room is reserved many times, at different time slots |
+| Club — Expense | 1:N | one club logs many expenses |
 
-#### OfficerPosition
-- PositionID (PK)
-- PositionName
+## 2. Normalized Relational Schema (3NF)
 
-Examples:
-- President
-- Treasurer
-- Secretary
+```
+Student(StudentID PK, Name, Email)
 
-#### ClubOfficer
-- StudentID (PK, FK)
-- ClubID (PK, FK)
-- PositionID (FK)
-- StartDate
-- EndDate
+Faculty(FacultyID PK, Name, Department, Email)
 
-ClubOfficer connects students with clubs and officer positions.
+Club(ClubID PK, ClubName, Description, Budget, FacultyID FK → Faculty.FacultyID)
 
-#### Event
-- EventID (PK)
-- ClubID (FK)
-- EventName
-- EventDate
-- Description
+Membership(MembershipID PK, StudentID FK → Student.StudentID,
+           ClubID FK → Club.ClubID, JoinDate, LeaveDate)
+    UNIQUE (StudentID, ClubID, JoinDate)
 
-One club can organize many events.
+OfficerPosition(PositionID PK, PositionName)
 
-#### Attendance
-- StudentID (PK, FK)
-- EventID (PK, FK)
-- AttendanceStatus
+ClubOfficer(ClubOfficerID PK, StudentID FK → Student.StudentID,
+            ClubID FK → Club.ClubID, PositionID FK → OfficerPosition.PositionID,
+            StartDate, EndDate)
+    UNIQUE (StudentID, ClubID, PositionID, StartDate)
 
-Attendance is an associative entity between Student and Event.
+Event(EventID PK, ClubID FK → Club.ClubID, EventName, EventDate, Description)
 
-#### Room
-- RoomID (PK)
-- Building
-- RoomNumber
-- Capacity
+Attendance(StudentID PK/FK → Student.StudentID,
+           EventID PK/FK → Event.EventID, AttendanceStatus)
 
-#### RoomReservation
-- ReservationID (PK)
-- EventID (FK)
-- RoomID (FK)
-- StartTime
-- EndTime
+Room(RoomID PK, Building, RoomNumber, Capacity)
 
-#### Expense
-- ExpenseID (PK)
-- ClubID (FK)
-- ExpenseDate
-- Amount
-- Description
+RoomReservation(ReservationID PK, EventID FK → Event.EventID,
+                RoomID FK → Room.RoomID, StartTime, EndTime)
 
----
+Expense(ExpenseID PK, ClubID FK → Club.ClubID, ExpenseDate, Semester, Amount, Description)
+```
 
-### Relationships and Cardinalities
+### What changed from the first draft, and why
 
-1. Student M:N Club
-   - Resolved by Membership.
+1. **`Membership`** now has its own surrogate key `MembershipID` instead of `(StudentID, ClubID)` as the primary key.
+   Reason: with a composite PK, a student who leaves a club and rejoins later could never get a second row — the PK would collide. The surrogate key plus a `UNIQUE(StudentID, ClubID, JoinDate)` constraint keeps history while still preventing duplicate join events on the same day.
 
-2. Student M:N Event
-   - Resolved by Attendance.
+2. **`ClubOfficer`** now has a surrogate key `ClubOfficerID` instead of `(StudentID, ClubID)`.
+   Reason: the same student can hold different positions in the same club over time (e.g. secretary in 2024, president in 2025). The old composite PK only allowed one officer record ever per student-club pair, which would block that.
 
-3. Club 1:N Event
-   - One club can organize many events.
-   - Each event belongs to one club.
-
-4. Faculty 1:N Club
-   - Each club has exactly one faculty advisor.
-   - One faculty advisor can advise multiple clubs.
-
-5. Club M:N Student through ClubOfficer
-   - A student can hold an officer position in a club.
-
-6. OfficerPosition 1:N ClubOfficer
-   - One position type can be assigned to many officers.
-
-7. Event 1:N RoomReservation
-   - An event can have a room reservation.
-
-8. Room 1:N RoomReservation
-   - A room can be reserved for many events at different times.
-
-9. Club 1:N Expense
-   - One club can have many expenses.
-
----
-
-## 2. Normalized Relational Schema
-
-### Student
-
-`Student(StudentID PK, Name, Email)`
-
-### Club
-
-`Club(ClubID PK, ClubName, Description, Budget, FacultyID FK)`
-
-### Faculty
-
-`Faculty(FacultyID PK, Name, Department, Email)`
-
-### Membership
-
-`Membership(StudentID PK/FK, ClubID PK/FK, JoinDate)`
-
-Foreign Keys:
-- `StudentID → Student.StudentID`
-- `ClubID → Club.ClubID`
-
-### OfficerPosition
-
-`OfficerPosition(PositionID PK, PositionName)`
-
-### ClubOfficer
-
-`ClubOfficer(StudentID PK/FK, ClubID PK/FK, PositionID FK, StartDate, EndDate)`
-
-Foreign Keys:
-- `StudentID → Student.StudentID`
-- `ClubID → Club.ClubID`
-- `PositionID → OfficerPosition.PositionID`
-
-### Event
-
-`Event(EventID PK, ClubID FK, EventName, EventDate, Description)`
-
-Foreign Key:
-- `ClubID → Club.ClubID`
-
-### Attendance
-
-`Attendance(StudentID PK/FK, EventID PK/FK, AttendanceStatus)`
-
-Foreign Keys:
-- `StudentID → Student.StudentID`
-- `EventID → Event.EventID`
-
-### Room
-
-`Room(RoomID PK, Building, RoomNumber, Capacity)`
-
-### RoomReservation
-
-`RoomReservation(ReservationID PK, EventID FK, RoomID FK, StartTime, EndTime)`
-
-Foreign Keys:
-- `EventID → Event.EventID`
-- `RoomID → Room.RoomID`
-
-### Expense
-
-`Expense(ExpenseID PK, ClubID FK, ExpenseDate, Amount, Description)`
-
-Foreign Key:
-- `ClubID → Club.ClubID`
-
----
+3. **`Expense`** gained a `Semester` attribute.
+   Reason: Query 3 asks for totals "during the current semester." Without an explicit field, that would have to be inferred from `ExpenseDate` with a hardcoded date range, which is fragile if the university's semester boundaries change. Storing `Semester` directly makes that query simple and reliable.
 
 ## 3. Design Decision
 
-One design decision is how to represent club officer positions.
+**Decision point:** how to represent club officer positions.
 
-There are two possible approaches:
+- **Option A** — store the position name directly on `ClubOfficer` as a free-text column (`PositionName`).
+- **Option B** — create a separate `OfficerPosition` lookup entity and reference it by `PositionID`.
 
-### Option 1
-Store the position directly in the ClubOfficer table:
+**Choice: Option B.**
 
-`ClubOfficer(StudentID, ClubID, PositionName, StartDate, EndDate)`
+Reasoning: officer titles ("President", "Treasurer", "Secretary", etc.) are a small, fixed set that many clubs reuse identically. Storing them as free text risks inconsistent spelling ("VP" vs "Vice President") and makes it harder to run university-wide reports like "list every treasurer across all clubs." A lookup table keeps the values standardized, lets the university add or rename positions in one place, and keeps `ClubOfficer` in 3NF (no dependency on a non-key text attribute).
 
-### Option 2
-Create a separate OfficerPosition entity:
+Trade-off: it adds one extra join for any query that needs to display a position name, but for a university-scale database this is a negligible cost compared to the data-integrity benefit.
 
-`OfficerPosition(PositionID, PositionName)`
+## 4. Example Queries (English, no SQL)
 
-I chose **Option 2** because it avoids repeating position names such as "President", "Treasurer", and "Secretary".
+1. **"Find all students who are officers in the Computer Science Club."**
+   Look up the club named "Computer Science Club," find all `ClubOfficer` records for that club whose term is currently active, and list the corresponding students.
 
-It also makes the database more normalized and allows the university to manage a standard list of officer positions.
+2. **"List all events scheduled for next week with their room reservations, including the building and room number."**
+   Find all events with an `EventDate` falling in next week's date range, then join each to its room reservation(s) to show the building and room number booked for it.
 
----
-
-## 4. Example Queries
-
-### Query 1
-"Find all students who are officers in the Computer Science Club."
-
-### Query 2
-"List all events scheduled for next week with their room reservations, including the building and room number."
-
-### Query 3
-"Show the total expenses for each club during the current semester."
+3. **"Show the total expenses for each club during the current semester."**
+   Group all `Expense` records by `ClubID` where `Semester` matches the current term, and sum the `Amount` for each club.
